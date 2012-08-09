@@ -274,7 +274,34 @@ class ParInputs():
         self.t0 = mjdstring
 
         self.m1 = '1.4'
-        self.m2 = '1.4'
+
+        # Let's just make up some "probabilities" for the three different
+        # types of companion
+        wd_ns_bh_probs = {'wd':0.5, 'ns':0.4, 'bh':0.1}
+
+        rando = np.random.uniform()
+        if rando < wd_ns_bh_probs['wd']:
+            # WD mass distribution: Kepler et al. 2007, MNRAS, 375, 1315K
+            randy = np.random.uniform()
+            if randy < 0.69:
+                wdmass = np.random.normal(0.578, 0.047)
+            elif randy < 0.92:
+                wdmass = np.random.normal(0.658, 0.149)
+            elif randy < 0.99:
+                wdmass = np.random.normal(0.381, 0.050)
+            else:
+                wdmass = np.random.normal(1.081, 0.143)
+            self.m2 = repr(wdmass)
+        elif random < wd_ns_bh_probs['wd'] + wd_ns_bh_probs['ns']:
+            # NS mass distribution: Kiziltan et al. 2010, arXiv 1011.4291
+            nsmass = np.random.normal(1.35, 0.13)
+            self.m2 = nsmass
+        else:
+            # BH mass I'll just take as uniform between 1 and 10...
+            bhmass = np.random.uniform(1., 10.)
+            self.m2 = bhmass
+        # Let's make sure we get something in the realm of... physics
+        if self.m2 < 0.05: self.m2 = 0.05
 
     def make_parfile(self):
         p0 = float(self.p0)
