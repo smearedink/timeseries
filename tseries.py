@@ -292,14 +292,14 @@ class ParInputs():
             else:
                 wdmass = np.random.normal(1.081, 0.143)
             self.m2 = repr(wdmass)
-        elif random < wd_ns_bh_probs['wd'] + wd_ns_bh_probs['ns']:
+        elif rando < wd_ns_bh_probs['wd'] + wd_ns_bh_probs['ns']:
             # NS mass distribution: Kiziltan et al. 2010, arXiv 1011.4291
             nsmass = np.random.normal(1.35, 0.13)
-            self.m2 = nsmass
+            self.m2 = repr(nsmass)
         else:
             # BH mass I'll just take as uniform between 1 and 10...
             bhmass = np.random.uniform(1., 10.)
-            self.m2 = bhmass
+            self.m2 = repr(bhmass)
         # Let's make sure we get something in the realm of... physics
         if self.m2 < 0.05: self.m2 = 0.05
 
