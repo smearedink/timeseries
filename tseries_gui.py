@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'tseries_gui.ui'
 #
-# Created: Wed Aug  8 15:21:43 2012
+# Created: Fri Aug 10 12:24:24 2012
 #      by: pyside-uic 0.2.13 running on PySide 1.1.1
 #
 # WARNING! All changes made in this file will be lost!
@@ -59,9 +59,9 @@ class Ui_TimeSeries(object):
         self.inputPSR.setCursorPosition(0)
         self.inputPSR.setObjectName("inputPSR")
         self.ParValues.addWidget(self.inputPSR, 0, 1, 1, 1)
-        self.inputAP = QtGui.QLineEdit(self.gridLayoutWidget)
-        self.inputAP.setObjectName("inputAP")
-        self.ParValues.addWidget(self.inputAP, 6, 1, 1, 1)
+        self.inputPB = QtGui.QLineEdit(self.gridLayoutWidget)
+        self.inputPB.setObjectName("inputPB")
+        self.ParValues.addWidget(self.inputPB, 6, 1, 1, 1)
         self.label_5 = QtGui.QLabel(self.gridLayoutWidget)
         self.label_5.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
         self.label_5.setObjectName("label_5")
@@ -222,7 +222,7 @@ class Ui_TimeSeries(object):
         QtCore.QObject.connect(self.inputPOSEPOCH, QtCore.SIGNAL("returnPressed()"), self.SaveParChanges.click)
         QtCore.QObject.connect(self.inputPEPOCH, QtCore.SIGNAL("returnPressed()"), self.SaveParChanges.click)
         QtCore.QObject.connect(self.inputT0, QtCore.SIGNAL("returnPressed()"), self.SaveParChanges.click)
-        QtCore.QObject.connect(self.inputAP, QtCore.SIGNAL("returnPressed()"), self.SaveParChanges.click)
+        QtCore.QObject.connect(self.inputPB, QtCore.SIGNAL("returnPressed()"), self.SaveParChanges.click)
         QtCore.QObject.connect(self.inputOM, QtCore.SIGNAL("returnPressed()"), self.SaveParChanges.click)
         QtCore.QObject.connect(self.inputE, QtCore.SIGNAL("returnPressed()"), self.SaveParChanges.click)
         QtCore.QObject.connect(self.inputINC, QtCore.SIGNAL("returnPressed()"), self.SaveParChanges.click)
@@ -240,8 +240,8 @@ class Ui_TimeSeries(object):
         TimeSeries.setTabOrder(self.inputP1, self.inputPOSEPOCH)
         TimeSeries.setTabOrder(self.inputPOSEPOCH, self.inputPEPOCH)
         TimeSeries.setTabOrder(self.inputPEPOCH, self.inputT0)
-        TimeSeries.setTabOrder(self.inputT0, self.inputAP)
-        TimeSeries.setTabOrder(self.inputAP, self.inputOM)
+        TimeSeries.setTabOrder(self.inputT0, self.inputPB)
+        TimeSeries.setTabOrder(self.inputPB, self.inputOM)
         TimeSeries.setTabOrder(self.inputOM, self.inputE)
         TimeSeries.setTabOrder(self.inputE, self.inputINC)
         TimeSeries.setTabOrder(self.inputINC, self.inputM1)
@@ -255,7 +255,7 @@ class Ui_TimeSeries(object):
         self.label.setText(QtGui.QApplication.translate("TimeSeries", "Number of pulsars:", None, QtGui.QApplication.UnicodeUTF8))
         self.AddPSRs.setText(QtGui.QApplication.translate("TimeSeries", "Add", None, QtGui.QApplication.UnicodeUTF8))
         self.inputPSR.setPlaceholderText(QtGui.QApplication.translate("TimeSeries", "Name", None, QtGui.QApplication.UnicodeUTF8))
-        self.inputAP.setPlaceholderText(QtGui.QApplication.translate("TimeSeries", "PSR semimajor axis (s)", None, QtGui.QApplication.UnicodeUTF8))
+        self.inputPB.setPlaceholderText(QtGui.QApplication.translate("TimeSeries", "Orbital period (days)", None, QtGui.QApplication.UnicodeUTF8))
         self.label_5.setText(QtGui.QApplication.translate("TimeSeries", "PEPOCH:", None, QtGui.QApplication.UnicodeUTF8))
         self.inputT0.setPlaceholderText(QtGui.QApplication.translate("TimeSeries", "Periastron epoch (MJD)", None, QtGui.QApplication.UnicodeUTF8))
         self.inputPEPOCH.setPlaceholderText(QtGui.QApplication.translate("TimeSeries", "Period epoch (MJD)", None, QtGui.QApplication.UnicodeUTF8))
@@ -272,7 +272,7 @@ class Ui_TimeSeries(object):
         self.label_6.setText(QtGui.QApplication.translate("TimeSeries", "T0:", None, QtGui.QApplication.UnicodeUTF8))
         self.inputP0.setPlaceholderText(QtGui.QApplication.translate("TimeSeries", "Period (s)", None, QtGui.QApplication.UnicodeUTF8))
         self.label_12.setText(QtGui.QApplication.translate("TimeSeries", "M2:", None, QtGui.QApplication.UnicodeUTF8))
-        self.label_7.setText(QtGui.QApplication.translate("TimeSeries", "AP:", None, QtGui.QApplication.UnicodeUTF8))
+        self.label_7.setText(QtGui.QApplication.translate("TimeSeries", "PB:", None, QtGui.QApplication.UnicodeUTF8))
         self.label_4.setText(QtGui.QApplication.translate("TimeSeries", "POSEPOCH:", None, QtGui.QApplication.UnicodeUTF8))
         self.inputE.setPlaceholderText(QtGui.QApplication.translate("TimeSeries", "Eccentricity", None, QtGui.QApplication.UnicodeUTF8))
         self.label_8.setText(QtGui.QApplication.translate("TimeSeries", "OM:", None, QtGui.QApplication.UnicodeUTF8))

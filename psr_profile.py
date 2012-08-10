@@ -612,11 +612,11 @@ def write_dat(ts, datfile):
 
 # with both masses and the 5 keplerian parameters (Pb, x, om, T0, e) we should
 # have enough information to use DDGR...
-def create_parfile(name, p0, p1, posepoch, pepoch, T0, a_p,\
+def create_parfile(name, p0, p1, posepoch, pepoch, T0, Pb,\
                    om=None, ecc=None, incl=None, m_p=1.4, m_c=1.4):
     """
     Still a test...
-    a1: semimajor axis in light-seconds
+    Pb: binary period in days
     incl in degrees between 0 and 90
     T0, posepoch and pepoch should be MJD objects
     """
@@ -631,10 +631,10 @@ def create_parfile(name, p0, p1, posepoch, pepoch, T0, a_p,\
         cosi = np.cos(incl*np.pi/180.)
         sini = np.sin(incl*np.pi/180.)
 
-    # Get a Pb from Kepler's laws
-    a_tot = a_p*(m_p+m_c)/m_c
-    Pbsq = 4.*np.pi*np.pi*pow(a_tot, 3)/(TSUN*(m_p+m_c))
-    Pb = np.sqrt(Pbsq)/86400.
+    # Get a_p from Pb + Kepler's laws
+    Pbsq = (86400.*Pb)**2
+    a_tot = pow(Pbsq*TSUN*(m_p+m_c)/(4.*np.pi*np.pi), 1./3.)
+    a_p = a_tot*m_c/(m_p+m_c)
 
     # Get x = asini
     asini = a_p*sini

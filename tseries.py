@@ -29,7 +29,7 @@ class TimeSeriesEditor(QtGui.QMainWindow):
             QtCore.SIGNAL('clicked()'), self.update_pars)
         QtCore.QObject.connect(self.ui.SaveParChanges,\
             QtCore.SIGNAL('clicked()'), self.disable_savechanges)
-        self.parfields = [self.ui.inputPSR, self.ui.inputP0, self.ui.inputP1, self.ui.inputPOSEPOCH, self.ui.inputPEPOCH, self.ui.inputT0, self.ui.inputAP, self.ui.inputOM, self.ui.inputE, self.ui.inputINC, self.ui.inputM1, self.ui.inputM2]
+        self.parfields = [self.ui.inputPSR, self.ui.inputP0, self.ui.inputP1, self.ui.inputPOSEPOCH, self.ui.inputPEPOCH, self.ui.inputT0, self.ui.inputPB, self.ui.inputOM, self.ui.inputE, self.ui.inputINC, self.ui.inputM1, self.ui.inputM2]
         for parfield in self.parfields:
             QtCore.QObject.connect(parfield,\
                 QtCore.SIGNAL('textEdited(const QString &)'),\
@@ -113,7 +113,7 @@ class TimeSeriesEditor(QtGui.QMainWindow):
         for psr in self.psr_pars_dict.values():
             parfile = create_parfile(psr.psr, float(psr.p0), float(psr.p1),\
                 MJD(psr.posepoch), MJD(psr.pepoch), MJD(psr.t0),\
-                float(psr.ap), float(psr.om), float(psr.e), float(psr.inc),\
+                float(psr.pb), float(psr.om), float(psr.e), float(psr.inc),\
                 float(psr.m1), float(psr.m2))
             parfile_loc = '%s/%s_%s.par' % (pardir, save_basename, psr.psr)
             np.savetxt(parfile_loc, parfile, fmt='%s')
@@ -150,7 +150,7 @@ class TimeSeriesEditor(QtGui.QMainWindow):
         for psr in self.psr_pars_dict.values():
             parfile = create_parfile(psr.psr, float(psr.p0), float(psr.p1),\
                 MJD(psr.posepoch), MJD(psr.pepoch), MJD(psr.t0),\
-                float(psr.ap), float(psr.om), float(psr.e), float(psr.inc),\
+                float(psr.pb), float(psr.om), float(psr.e), float(psr.inc),\
                 float(psr.m1), float(psr.m2))
             parfile_loc = '%s/%s_%s.par' % (pardir, basename, psr.psr)
             np.savetxt(parfile_loc, parfile, fmt='%s')
@@ -199,7 +199,7 @@ class TimeSeriesEditor(QtGui.QMainWindow):
             self.ui.inputPOSEPOCH.setText(self.psr_pars_dict[item].posepoch)
             self.ui.inputPEPOCH.setText(self.psr_pars_dict[item].pepoch)
             self.ui.inputT0.setText(self.psr_pars_dict[item].t0)
-            self.ui.inputAP.setText(self.psr_pars_dict[item].ap)
+            self.ui.inputPB.setText(self.psr_pars_dict[item].pb)
             self.ui.inputOM.setText(self.psr_pars_dict[item].om)
             self.ui.inputE.setText(self.psr_pars_dict[item].e)
             self.ui.inputINC.setText(self.psr_pars_dict[item].inc)
@@ -212,7 +212,7 @@ class TimeSeriesEditor(QtGui.QMainWindow):
             self.ui.inputPOSEPOCH.setText('')
             self.ui.inputPEPOCH.setText('')
             self.ui.inputT0.setText('')
-            self.ui.inputAP.setText('')
+            self.ui.inputPB.setText('')
             self.ui.inputOM.setText('')
             self.ui.inputE.setText('')
             self.ui.inputINC.setText('')
@@ -227,7 +227,7 @@ class TimeSeriesEditor(QtGui.QMainWindow):
             self.psr_pars_dict[item].posepoch=str(self.ui.inputPOSEPOCH.text())
             self.psr_pars_dict[item].pepoch = str(self.ui.inputPEPOCH.text())
             self.psr_pars_dict[item].t0 = str(self.ui.inputT0.text())
-            self.psr_pars_dict[item].ap = str(self.ui.inputAP.text())
+            self.psr_pars_dict[item].pb = str(self.ui.inputPB.text())
             self.psr_pars_dict[item].om = str(self.ui.inputOM.text())
             self.psr_pars_dict[item].e = str(self.ui.inputE.text())
             self.psr_pars_dict[item].inc = str(self.ui.inputINC.text())
@@ -255,7 +255,8 @@ class ParInputs():
 
     def all_random(self):
         p0 = np.random.uniform(low=0.001, high=0.02)
-        p1 = np.random.uniform(low=1.e-15, high=1.e-9)*p0
+        # p1 range reflects doppler shift due to cluster motion
+        p1 = np.random.uniform(low=-1.e-18, high=1.e-18)
         self.p0 = repr(p0)
         self.p1 = repr(p1)
 
@@ -266,7 +267,8 @@ class ParInputs():
         inc = np.arccos(np.random.uniform())*180./np.pi
         self.inc = repr(inc)
 
-        self.ap = repr(np.random.uniform(low=0.5, high=500.))
+        # Pb from 10 minutes to 3 days
+        self.pb = repr(np.random.uniform(low=6./864., high=3.))
 
         mjdstring = str(current_mjd().day_int)
         self.posepoch = mjdstring
@@ -275,33 +277,11 @@ class ParInputs():
 
         self.m1 = '1.4'
 
-        # Let's just make up some "probabilities" for the three different
-        # types of companion
-        wd_ns_bh_probs = {'wd':0.5, 'ns':0.4, 'bh':0.1}
-
-        rando = np.random.uniform()
-        if rando < wd_ns_bh_probs['wd']:
-            # WD mass distribution: Kepler et al. 2007, MNRAS, 375, 1315K
-            randy = np.random.uniform()
-            if randy < 0.69:
-                wdmass = np.random.normal(0.578, 0.047)
-            elif randy < 0.92:
-                wdmass = np.random.normal(0.658, 0.149)
-            elif randy < 0.99:
-                wdmass = np.random.normal(0.381, 0.050)
-            else:
-                wdmass = np.random.normal(1.081, 0.143)
-            self.m2 = repr(wdmass)
-        elif rando < wd_ns_bh_probs['wd'] + wd_ns_bh_probs['ns']:
-            # NS mass distribution: Kiziltan et al. 2010, arXiv 1011.4291
-            nsmass = np.random.normal(1.35, 0.13)
-            self.m2 = repr(nsmass)
+        randy = np.random.uniform()
+        if randy < 0.8:
+            self.m2 = repr(np.random.uniform(0.05, 3.0))
         else:
-            # BH mass I'll just take as uniform between 1 and 10...
-            bhmass = np.random.uniform(1., 10.)
-            self.m2 = repr(bhmass)
-        # Let's make sure we get something in the realm of... physics
-        if self.m2 < 0.05: self.m2 = 0.05
+            self.m2 = repr(np.random.uniform(3.0, 10.0))
 
     def make_parfile(self):
         p0 = float(self.p0)
@@ -309,14 +289,14 @@ class ParInputs():
         posepoch = MJD(self.posepoch)
         pepoch = MJD(self.pepoch)
         t0 = MJD(self.t0)
-        ap = float(self.ap)
+        pb = float(self.pb)
         om = float(self.om)
         e = float(self.e)
         inc = float(self.inc)
         m1 = float(self.m1)
         m2 = float(self.m2)
 
-        parfile = create_parfile(self.psr, p0, p1, posepoch, pepoch, t0, ap,\
+        parfile = create_parfile(self.psr, p0, p1, posepoch, pepoch, t0, pb,\
                   om, e, inc, m1, m2)
         np.savetxt('TSE_'+self.psr+'.par', parfile, fmt='%s')
         
