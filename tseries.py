@@ -29,7 +29,7 @@ class TimeSeriesEditor(QtGui.QMainWindow):
             QtCore.SIGNAL('clicked()'), self.update_pars)
         QtCore.QObject.connect(self.ui.SaveParChanges,\
             QtCore.SIGNAL('clicked()'), self.disable_savechanges)
-        self.parfields = [self.ui.inputPSR, self.ui.inputP0, self.ui.inputP1, self.ui.inputPOSEPOCH, self.ui.inputPEPOCH, self.ui.inputT0, self.ui.inputPB, self.ui.inputOM, self.ui.inputE, self.ui.inputINC, self.ui.inputM1, self.ui.inputM2]
+        self.parfields = [self.ui.inputPSR, self.ui.inputP0, self.ui.inputP1, self.ui.inputPOSEPOCH, self.ui.inputPEPOCH, self.ui.inputT0, self.ui.inputPB, self.ui.inputOM, self.ui.inputE, self.ui.inputINC, self.ui.inputM1, self.ui.inputM2, self.ui.inputAMP]
         for parfield in self.parfields:
             QtCore.QObject.connect(parfield,\
                 QtCore.SIGNAL('textEdited(const QString &)'),\
@@ -110,6 +110,7 @@ class TimeSeriesEditor(QtGui.QMainWindow):
         # Generate parfiles and dat/inf files
         numpsrs = self.ui.PSRlist.count()
         profiles = []
+        profile_amps = []
         for psr in self.psr_pars_dict.values():
             parfile = create_parfile(psr.psr, float(psr.p0), float(psr.p1),\
                 MJD(psr.posepoch), MJD(psr.pepoch), MJD(psr.t0),\
@@ -118,8 +119,7 @@ class TimeSeriesEditor(QtGui.QMainWindow):
             parfile_loc = '%s/%s_%s.par' % (pardir, save_basename, psr.psr)
             np.savetxt(parfile_loc, parfile, fmt='%s')
             profiles.append(psrProfile(parfile_loc))
-        # TODO: profile amps should be more interactive...
-        profile_amps = np.ones(numpsrs)*30.
+            profile_amps.append(float(psr.amp))
         start_time = MJD(str(self.ui.inputStartTime.text()))
         tres = float(self.ui.inputTres.text())
         noise = float(self.ui.inputNoise.text())
@@ -147,6 +147,7 @@ class TimeSeriesEditor(QtGui.QMainWindow):
         # Generate parfiles and dat/inf files
         numpsrs = self.ui.PSRlist.count()
         profiles = []
+        profile_amps = []
         for psr in self.psr_pars_dict.values():
             parfile = create_parfile(psr.psr, float(psr.p0), float(psr.p1),\
                 MJD(psr.posepoch), MJD(psr.pepoch), MJD(psr.t0),\
@@ -155,8 +156,7 @@ class TimeSeriesEditor(QtGui.QMainWindow):
             parfile_loc = '%s/%s_%s.par' % (pardir, basename, psr.psr)
             np.savetxt(parfile_loc, parfile, fmt='%s')
             profiles.append(psrProfile(parfile_loc))
-        # TODO: profile amps should be more interactive...
-        profile_amps = np.ones(numpsrs)*30.
+            profile_amps.append(float(psr.amp))
         start_time = MJD(str(self.ui.inputStartTime.text()))
         tres = float(self.ui.inputTres.text())
         noise = float(self.ui.inputNoise.text())
@@ -205,6 +205,7 @@ class TimeSeriesEditor(QtGui.QMainWindow):
             self.ui.inputINC.setText(self.psr_pars_dict[item].inc)
             self.ui.inputM1.setText(self.psr_pars_dict[item].m1)
             self.ui.inputM2.setText(self.psr_pars_dict[item].m2)
+            self.ui.inputAMP.setText(self.psr_pars_dict[item].amp)
         except:
             self.ui.inputPSR.setText('')
             self.ui.inputP0.setText('')
@@ -218,6 +219,7 @@ class TimeSeriesEditor(QtGui.QMainWindow):
             self.ui.inputINC.setText('')
             self.ui.inputM1.setText('')
             self.ui.inputM2.setText('')
+            self.ui.inputAMP.setText('')
 
     def update_pars(self):
         try:
@@ -233,6 +235,7 @@ class TimeSeriesEditor(QtGui.QMainWindow):
             self.psr_pars_dict[item].inc = str(self.ui.inputINC.text())
             self.psr_pars_dict[item].m1 = str(self.ui.inputM1.text())
             self.psr_pars_dict[item].m2 = str(self.ui.inputM2.text())
+            self.psr_pars_dict[item].amp = str(self.ui.inputAMP.text())
 
             newname = str(self.ui.inputPSR.text())
             if newname != item:
@@ -282,6 +285,9 @@ class ParInputs():
             self.m2 = repr(np.random.uniform(0.05, 3.0))
         else:
             self.m2 = repr(np.random.uniform(3.0, 10.0))
+
+        # pulse amplitude as a fraction of noise
+        self.amp = repr(round(np.random.uniform(0.05, 0.5), 7))
 
     def make_parfile(self):
         p0 = float(self.p0)

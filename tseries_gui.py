@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'tseries_gui.ui'
 #
-# Created: Fri Aug 10 12:24:24 2012
+# Created: Fri Aug 10 13:50:49 2012
 #      by: pyside-uic 0.2.13 running on PySide 1.1.1
 #
 # WARNING! All changes made in this file will be lost!
@@ -50,7 +50,7 @@ class Ui_TimeSeries(object):
         self.frame.setFrameShadow(QtGui.QFrame.Raised)
         self.frame.setObjectName("frame")
         self.gridLayoutWidget = QtGui.QWidget(self.frame)
-        self.gridLayoutWidget.setGeometry(QtCore.QRect(10, 10, 291, 411))
+        self.gridLayoutWidget.setGeometry(QtCore.QRect(10, 10, 291, 381))
         self.gridLayoutWidget.setObjectName("gridLayoutWidget")
         self.ParValues = QtGui.QGridLayout(self.gridLayoutWidget)
         self.ParValues.setContentsMargins(0, 0, 0, 0)
@@ -144,6 +144,13 @@ class Ui_TimeSeries(object):
         self.SaveParChanges.setEnabled(False)
         self.SaveParChanges.setGeometry(QtCore.QRect(90, 430, 151, 32))
         self.SaveParChanges.setObjectName("SaveParChanges")
+        self.inputAMP = QtGui.QLineEdit(self.frame)
+        self.inputAMP.setGeometry(QtCore.QRect(210, 400, 91, 22))
+        self.inputAMP.setMaxLength(20)
+        self.inputAMP.setObjectName("inputAMP")
+        self.label_21 = QtGui.QLabel(self.frame)
+        self.label_21.setGeometry(QtCore.QRect(20, 400, 191, 22))
+        self.label_21.setObjectName("label_21")
         self.frame_2 = QtGui.QFrame(self.centralwidget)
         self.frame_2.setGeometry(QtCore.QRect(30, 10, 251, 71))
         self.frame_2.setFrameShape(QtGui.QFrame.Box)
@@ -228,6 +235,7 @@ class Ui_TimeSeries(object):
         QtCore.QObject.connect(self.inputINC, QtCore.SIGNAL("returnPressed()"), self.SaveParChanges.click)
         QtCore.QObject.connect(self.inputM1, QtCore.SIGNAL("returnPressed()"), self.SaveParChanges.click)
         QtCore.QObject.connect(self.inputM2, QtCore.SIGNAL("returnPressed()"), self.SaveParChanges.click)
+        QtCore.QObject.connect(self.inputAMP, QtCore.SIGNAL("returnPressed()"), self.SaveParChanges.click)
         QtCore.QMetaObject.connectSlotsByName(TimeSeries)
         TimeSeries.setTabOrder(self.NumPSRs, self.AddPSRs)
         TimeSeries.setTabOrder(self.AddPSRs, self.PSRlist)
@@ -279,6 +287,8 @@ class Ui_TimeSeries(object):
         self.label_9.setText(QtGui.QApplication.translate("TimeSeries", "P0:", None, QtGui.QApplication.UnicodeUTF8))
         self.label_13.setText(QtGui.QApplication.translate("TimeSeries", "E:", None, QtGui.QApplication.UnicodeUTF8))
         self.SaveParChanges.setText(QtGui.QApplication.translate("TimeSeries", "Save changes", None, QtGui.QApplication.UnicodeUTF8))
+        self.inputAMP.setPlaceholderText(QtGui.QApplication.translate("TimeSeries", "Amplitude", None, QtGui.QApplication.UnicodeUTF8))
+        self.label_21.setText(QtGui.QApplication.translate("TimeSeries", "Pulse amp (fraction of noise):", None, QtGui.QApplication.UnicodeUTF8))
         self.label_15.setText(QtGui.QApplication.translate("TimeSeries", "Editor", None, QtGui.QApplication.UnicodeUTF8))
         self.label_14.setText(QtGui.QApplication.translate("TimeSeries", "Time Series", None, QtGui.QApplication.UnicodeUTF8))
         self.AddToTS.setText(QtGui.QApplication.translate("TimeSeries", "Add to existing time series...", None, QtGui.QApplication.UnicodeUTF8))

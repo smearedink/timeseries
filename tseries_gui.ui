@@ -131,7 +131,7 @@
        <x>10</x>
        <y>10</y>
        <width>291</width>
-       <height>411</height>
+       <height>381</height>
       </rect>
      </property>
      <layout class="QGridLayout" name="ParValues">
@@ -358,6 +358,35 @@
      </property>
      <property name="text">
       <string>Save changes</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="inputAMP">
+     <property name="geometry">
+      <rect>
+       <x>210</x>
+       <y>400</y>
+       <width>91</width>
+       <height>22</height>
+      </rect>
+     </property>
+     <property name="maxLength">
+      <number>20</number>
+     </property>
+     <property name="placeholderText">
+      <string>Amplitude</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_21">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>400</y>
+       <width>191</width>
+       <height>22</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Pulse amp (fraction of noise):</string>
      </property>
     </widget>
    </widget>
@@ -813,6 +842,22 @@
     <hint type="destinationlabel">
      <x>445</x>
      <y>455</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>inputAMP</sender>
+   <signal>returnPressed()</signal>
+   <receiver>SaveParChanges</receiver>
+   <slot>click()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>565</x>
+     <y>450</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>475</x>
+     <y>485</y>
     </hint>
    </hints>
   </connection>

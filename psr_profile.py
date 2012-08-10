@@ -481,12 +481,17 @@ def multi_psr_ts(psr_list, amp_list, start, tres, noise, length, fname,\
     fname: no extension
     fpath: directory to place dat and inf files into
     psr_list: iterable set of psrProfile objects
-    amp_list: corresponding list of pulse heights
+    amp_list: corresponding list of pulse heights as fraction of noise sigma
+      (if no noise is present, values are simply used as heights)
     start: start time as MJD object
+    noise: sigma of white noise in time series
     """
     nbins = int(np.ceil(length/tres))
 
     full_ts = np.zeros(nbins)
+
+    amp_list = np.array(amp_list)
+    if noise: amp_list *= noise
 
     for ii in range(len(psr_list)):
         ts = TimeSeries(psr_list[ii], amp_list[ii], start, tres, 0, length,\
@@ -519,6 +524,7 @@ def multi_psr_ts_add(psr_list, amp_list, in_fname, out_fname, in_fpath='.',\
     """
     edit of multi_psr_ts to allow adding to existing datfile...
     in_fname and out_fname: no extension
+    amp_list: amps as fraction of time series 1-sigma noise level
     """
     in_inffile = read_inffile('%s/%s' % (in_fpath, in_fname))
 
@@ -528,6 +534,10 @@ def multi_psr_ts_add(psr_list, amp_list, in_fname, out_fname, in_fpath='.',\
     start = MJD(in_inffile.mjd_i, in_inffile.mjd_f)
 
     full_ts = load_dat('%s/%s' % (in_fpath, in_fname))
+
+    amp_list = np.array(amp_list)
+    noise = np.std(full_ts)
+    amp_list *= noise
 
     for ii in range(len(psr_list)):
         ts = TimeSeries(psr_list[ii], amp_list[ii], start, tres, 0, length)
