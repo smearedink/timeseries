@@ -1,5 +1,5 @@
 import numpy as np
-import sys, os, time
+import sys, os, time, locale
 from PySide import QtCore, QtGui
 from psr_profile import *
 from tseries_gui import Ui_TimeSeries
@@ -13,6 +13,14 @@ class TimeSeriesEditor(QtGui.QMainWindow):
         self.setFixedSize(self.size())
 
         self.ui.inputStartTime.setText(str(current_mjd().day_int))
+
+        self.status_norm_clr = QtGui.QColor(220, 220, 220)
+        self.status_save_clr = QtGui.QColor(0, 255, 0)
+        self.ui.statusreport.setText("Welcome to Time Series Editor! Enjoy faking pulsar data.")
+        self.ui.statusreport.setStyleSheet("QFrame { background-color: %s }" % self.status_norm_clr.name())
+
+        try: locale.setlocale(locale.LC_ALL, 'en_US')
+        except: pass
 
         # Link buttons and things
         QtCore.QObject.connect(self.ui.AddPSRs,\
@@ -97,6 +105,28 @@ class TimeSeriesEditor(QtGui.QMainWindow):
             msgbox.exec_()
             return
 
+        # Ask if user would like to change reference epochs to be close to
+        # that of loaded time series
+        load_inf = read_inffile(load_basedir + load_basename)
+        load_mjd = int(load_inf.mjd_i)
+        ask_mjd_question = False
+        for psr in self.psr_pars_dict.values():
+            for day in [psr.posepoch, psr.pepoch, psr.t0]:
+                if MJD(day).day_int != load_mjd:
+                    ask_mjd_question = True
+                    break
+        if ask_mjd_question:
+            mjd_question = 'Change all pulsar epochs to MJD '+str(load_mjd)+' to match loaded time series?'
+            mjd_reply = QtGui.QMessageBox.question(self, 'Change MJDS?', mjd_question, QtGui.QMessageBox.Yes | QtGui.QMessageBox.No | QtGui.QMessageBox.Cancel, QtGui.QMessageBox.Yes)
+            if mjd_reply == QtGui.QMessageBox.Yes:
+                for psr in self.psr_pars_dict.values():
+                    psr.posepoch = repr(load_mjd)
+                    psr.pepoch = repr(load_mjd)
+                    psr.t0 = repr(load_mjd)
+                self.show_pars()
+            elif mjd_reply == QtGui.QMessageBox.Cancel:
+                return
+
         savepath = str(filewindow.getSaveFileName()[0])
         if not savepath: return
         if savepath[-4:] != '.dat': savepath += '.dat'
@@ -107,6 +137,15 @@ class TimeSeriesEditor(QtGui.QMainWindow):
         pardir = '%s_parfiles' % (save_basedir + save_basename)
         if not os.path.exists(pardir): os.makedirs(pardir)
 
+        # Update status box to show we're saving now
+        npsrs = len(self.psr_pars_dict)
+        nbins = int(load_inf.N)
+        try: totalbins_str = locale.format("%d", nbins*npsrs, grouping=True)
+        except: totalbins_str = repr(nbins*npsrs)
+        self.ui.statusreport.setText('Generating a total of %s time series bins. Please wait...' % totalbins_str)
+        self.ui.statusreport.setStyleSheet("QFrame { background-color: %s }" % self.status_save_clr.name())
+        QtGui.qApp.processEvents()
+
         # Generate parfiles and dat/inf files
         numpsrs = self.ui.PSRlist.count()
         profiles = []
@@ -115,7 +154,7 @@ class TimeSeriesEditor(QtGui.QMainWindow):
             parfile = create_parfile(psr.psr, float(psr.p0), float(psr.p1),\
                 MJD(psr.posepoch), MJD(psr.pepoch), MJD(psr.t0),\
                 float(psr.pb), float(psr.om), float(psr.e), float(psr.inc),\
-                float(psr.m1), float(psr.m2))
+                float(psr.m1), float(psr.m2), 'Amplitude: '+psr.amp)
             parfile_loc = '%s/%s_%s.par' % (pardir, save_basename, psr.psr)
             np.savetxt(parfile_loc, parfile, fmt='%s')
             profiles.append(psrProfile(parfile_loc))
@@ -128,9 +167,9 @@ class TimeSeriesEditor(QtGui.QMainWindow):
         multi_psr_ts_add(profiles, profile_amps, load_basename, save_basename, load_basedir, save_basedir)
         os.rename('%s.inf'%save_basename, '%s.inf'%(save_basedir+save_basename))
 
-        # inform user that files were written
-        msgbox.setText('Files written to %s' % save_basedir)
-        msgbox.exec_()
+        # Update status box to show we're done saving
+        self.ui.statusreport.setText('Files written to %s' % save_basedir)
+        self.ui.statusreport.setStyleSheet("QFrame { background-color: %s }" % self.status_norm_clr.name())
 
     def new_TS(self):
         filewindow = QtGui.QFileDialog()
@@ -144,6 +183,17 @@ class TimeSeriesEditor(QtGui.QMainWindow):
         pardir = '%s_parfiles' % (basedir + basename)
         if not os.path.exists(pardir): os.makedirs(pardir)
 
+        # Update status box to show we're saving now
+        npsrs = len(self.psr_pars_dict)
+        tres = float(self.ui.inputTres.text())
+        length = float(self.ui.inputLength.text())
+        nbins = int(np.ceil(length/tres))
+        try: totalbins_str = locale.format("%d", nbins*npsrs, grouping=True)
+        except: totalbins_str = repr(nbins*npsrs)
+        self.ui.statusreport.setText('Generating a total of %s time series bins. Please wait...' % totalbins_str)
+        self.ui.statusreport.setStyleSheet("QFrame { background-color: %s }" % self.status_save_clr.name())
+        QtGui.qApp.processEvents()
+
         # Generate parfiles and dat/inf files
         numpsrs = self.ui.PSRlist.count()
         profiles = []
@@ -152,23 +202,20 @@ class TimeSeriesEditor(QtGui.QMainWindow):
             parfile = create_parfile(psr.psr, float(psr.p0), float(psr.p1),\
                 MJD(psr.posepoch), MJD(psr.pepoch), MJD(psr.t0),\
                 float(psr.pb), float(psr.om), float(psr.e), float(psr.inc),\
-                float(psr.m1), float(psr.m2))
+                float(psr.m1), float(psr.m2), 'Amplitude: '+psr.amp)
             parfile_loc = '%s/%s_%s.par' % (pardir, basename, psr.psr)
             np.savetxt(parfile_loc, parfile, fmt='%s')
             profiles.append(psrProfile(parfile_loc))
             profile_amps.append(float(psr.amp))
         start_time = MJD(str(self.ui.inputStartTime.text()))
-        tres = float(self.ui.inputTres.text())
         noise = float(self.ui.inputNoise.text())
-        length = float(self.ui.inputLength.text())
 
         multi_psr_ts(profiles, profile_amps, start_time, tres, noise, length, basename, basedir)
         os.rename('%s.inf'%basename, '%s.inf'%(basedir+basename))
 
-        # inform user that files were written
-        msgbox = QtGui.QMessageBox()
-        msgbox.setText('Files written to %s' % basedir)
-        msgbox.exec_()
+        # Update status box to show we're done saving
+        self.ui.statusreport.setText('Files written to %s' % basedir)
+        self.ui.statusreport.setStyleSheet("QFrame { background-color: %s }" % self.status_norm_clr.name())
 
     def add_pulsars(self):
         num = self.ui.NumPSRs.value()
@@ -287,7 +334,7 @@ class ParInputs():
             self.m2 = repr(np.random.uniform(3.0, 10.0))
 
         # pulse amplitude as a fraction of noise
-        self.amp = repr(round(np.random.uniform(0.05, 0.5), 7))
+        self.amp = repr(round(np.random.triangular(0.01, 0.01, 0.05), 7))
 
     def make_parfile(self):
         p0 = float(self.p0)
@@ -301,9 +348,10 @@ class ParInputs():
         inc = float(self.inc)
         m1 = float(self.m1)
         m2 = float(self.m2)
+        comments = 'Amplitude: '+self.amp
 
         parfile = create_parfile(self.psr, p0, p1, posepoch, pepoch, t0, pb,\
-                  om, e, inc, m1, m2)
+                  om, e, inc, m1, m2, comments)
         np.savetxt('TSE_'+self.psr+'.par', parfile, fmt='%s')
         
         #print "Wrote file %s" % (self.psr+'.par')

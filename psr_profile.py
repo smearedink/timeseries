@@ -623,12 +623,14 @@ def write_dat(ts, datfile):
 # with both masses and the 5 keplerian parameters (Pb, x, om, T0, e) we should
 # have enough information to use DDGR...
 def create_parfile(name, p0, p1, posepoch, pepoch, T0, Pb,\
-                   om=None, ecc=None, incl=None, m_p=1.4, m_c=1.4):
+                   om=None, ecc=None, incl=None, m_p=1.4, m_c=1.4,\
+                   comments=None):
     """
     Still a test...
     Pb: binary period in days
     incl in degrees between 0 and 90
     T0, posepoch and pepoch should be MJD objects
+    comments: string to be appended to parfile as comment
     """
     pars = ['PSR', 'RAJ', 'DECJ', 'POSEPOCH', 'P0', 'P1', 'PEPOCH', 'DM',\
             'BINARY', 'A1', 'E', 'T0', 'PB', 'OM', 'MTOT', 'M2']
@@ -664,5 +666,7 @@ def create_parfile(name, p0, p1, posepoch, pepoch, T0, Pb,\
     out_lines = []
     for ii in range(len(pars)):
         out_lines.append(parline % (pars[ii], par_vals[ii]))
+    if comments is not None:
+        out_lines.append('# ' + str(comments))
 
     return out_lines
