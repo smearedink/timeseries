@@ -9,6 +9,7 @@ from presto import read_inffile, writeinf, infodata
 from numpy.polynomial.polynomial import polyval
 
 TSUN = 4.925490947e-6
+OMFAC = 5.53061466e-10
 
 #   ____  ____  ____  ____  ____   __  ____  __  __    ____ 
 #  (  _ \/ ___)(  _ \(  _ \(  _ \ /  \(  __)(  )(  )  (  __)
@@ -172,8 +173,13 @@ class MJD():
             self.day_int = int(day_int)
             self.day_frac = float(day_frac)
         elif type(day_int) is not str:
-            self.day_int = int(day_int)
-            self.day_frac = np.floor((day_int-np.floor(day_int))*1.e11)/(1.e11)
+            if isinstance(day_int, MJD):
+                self.day_int = day_int.day_int
+                self.day_frac = day_int.day_frac
+            else:
+                self.day_int = int(day_int)
+                self.day_frac = np.floor((day_int-np.floor(day_int))*1.e11)/\
+                    (1.e11)
         else:
             val = eval(day_int)
             if type(val) is int:
@@ -216,22 +222,70 @@ class MJD():
         else: return self.add(days)
 
     def subtract_MJD(self, other_MJD):
-        if self.day_frac - other_MJD.day_frac >= 0.0:
-            return MJD(self.day_int - other_MJD.day_int,\
-                       self.day_frac - other_MJD.day_frac)
+        if self > other_MJD: 
+            if self.day_frac - other_MJD.day_frac >= 0.0:
+                return MJD(self.day_int - other_MJD.day_int,\
+                    self.day_frac - other_MJD.day_frac)
+            else:
+                return MJD(self.day_int - other_MJD.day_int - 1,\
+                    self.day_frac - other_MJD.day_frac + 1.0)
         else:
-            return MJD(self.day_int - other_MJD.day_int - 1,\
-                       self.day_frac - other_MJD.day_frac + 1.0)
+            int_part = float(self.day_int - other_MJD.day_int)
+            frac_part = self.day_frac - other_MJD.day_frac
+            return int_part + frac_part
 
     def __sub__(self, days):
         if isinstance(days, MJD): return self.subtract_MJD(days)
         else: return self.subtract(days)
+
+    def __rsub__(self, days):
+        return days + -self
+
+    def __neg__(self):
+        if self.day_int >= 1:
+            return -float(self)
 
     def as_float(self):
         return self.day_int + self.day_frac
 
     def show(self):
         return repr(self.day_int)+repr(self.day_frac)[1:]
+
+    def __repr__(self):
+        return self.show()
+
+    def __float__(self):
+        return self.as_float()
+
+    def __eq__(self, other):
+        other = MJD(other)
+        return (self.day_int == other.day_int) and\
+            (self.day_frac == other.day_frac)
+
+    def __ne__(self, other):
+        other = MJD(other)
+        return (self.day_int != other.day_int) or\
+            (self.day_frac != other.day_frac)
+
+    def __lt__(self, other):
+        other = MJD(other)
+        if (self.day_int == other.day_int):
+            return self.day_frac < other.day_frac
+        else:
+            return self.day_int < other.day_int
+
+    def __gt__(self, other):
+        other = MJD(other)
+        if (self.day_int == other.day_int):
+            return self.day_frac > other.day_frac
+        else:
+            return self.day_int > other.day_int
+
+    def __le__(self, other):
+        return self < other or self == other
+
+    def __ge__(self, other):
+        return self > other or self == other
 
 #  ____________                ________           _____             
 #  ___  __/__(_)______ __________  ___/______________(_)____________
@@ -284,24 +338,18 @@ class TimeSeries():
 
         self.ts_pulses = np.zeros(self.nbins)
 
-        nbins_per_chunk = int(np.ceil(self.nbins/float(self.nchunks)))
-        chunklens = np.ones(self.nchunks, int)*nbins_per_chunk
-        chunklens[self.nchunks - 1] = self.nbins - \
-            (self.nchunks - 1)*nbins_per_chunk
+        split_ts_pulses = np.array_split(self.ts_pulses, self.nchunks)
 
         time = start
-        current_bin = 0
-        for chunklen in chunklens:
+        for chunk in split_ts_pulses:
+            chunklen = len(chunk)
             tobs = chunklen*tres
             if tobs % 60: tobs += 60. - (tobs % 60)
-            polycos, tmid, rphase =\
-                polyco(profile.parfile, time, tobs, obs)
-            phase_arr = calc_phases(rphase, (tmid-time).as_float(), tres,\
-                                    chunklen, profile.f0, polycos)
-            self.ts_pulses[current_bin:current_bin+chunklen] +=\
-                pulseheight*profile.phase(phase_arr)
+            pco = polyCo(profile, time, tobs, obs)
+            phase_arr = pco.calc_phases(tres, chunklen)
+            chunk += pulseheight*profile.phase(phase_arr)
             time = time + chunklen*tres/86400.
-            current_bin += chunklen
+        self.ts_pulses = np.concatenate(split_ts_pulses)
 
     def plot(self, withnoise=True, rounded=False):
         """
@@ -391,46 +439,68 @@ def gaussian(phasebins=1024.0, sigma=0.01, mean=0.5, amp=1.0, loval=0.0,\
     x = np.linspace(loval, hival_bins, nbins, endpoint=False)
     return amp*np.exp(-np.square(x-mean)/(2.*sigma*sigma))
 
-def polyco(parfile, start, tobs=1000.0, obs=-1, freq=1420.0, ncoeff=12):
+#                            _/              _/_/_/           
+#       _/_/_/      _/_/    _/  _/    _/  _/          _/_/    
+#      _/    _/  _/    _/  _/  _/    _/  _/        _/    _/   
+#     _/    _/  _/    _/  _/  _/    _/  _/        _/    _/    
+#    _/_/_/      _/_/    _/    _/_/_/    _/_/_/    _/_/       
+#   _/                            _/                          
+#  _/                        _/_/                             
+
+class polyCo:
     """
-    parfile: file from which to generate polycos
+    profile: psrProfile object for which to generate polycos
     start: starting time as an MJD object
-    tobs: duration of polyco-usage in seconds
+    tobs: durating of polyco-usage in seconds, but will be changed to be an
+        integer number of minutes (less than the input value) if it is not a
+        multiple of 60
     obs: observatory code (-1 is barycentred)
     freq: radio frequency for which to generate polycos
     ncoeff: number of coefficients to generate
     """
-    os.system(('tempo -f %s -Z START=%s -Z SPAN=%f -Z TOBS=%fS -Z OBS=%s'+\
-               ' -Z FREQ=%f -Z NCOEFF=%d -Z OUT=temp_polyco.dat') %\
-               (parfile, start.show(), tobs, tobs, obs, freq, ncoeff))
- 
-    polyfile = np.loadtxt('temp_polyco.dat', dtype=str, delimiter='$$$')
-    # the tmid used in polycos assumes tobs in integer minutes, it seems
-    tmid = start.add(np.floor(tobs/60.)/2880.)
-    rphase = float(polyfile[1][1:20])
-    polycos = []
-    for line in polyfile[2:]:
-        polycos += line.replace('D', 'E').split()
+    def __init__(self, profile, start, tobs, obs=-1, freq=1420.0, ncoeff=12):
+        os.system(('tempo -f %s -Z START=%s -Z SPAN=%f -Z TOBS=%fS -Z OBS=%s'+\
+            ' -Z FREQ=%f -Z NCOEFF=%d -Z OUT=temp_polyco.dat') %\
+            (profile.parfile, start.show(), tobs, tobs, obs, freq, ncoeff))
 
-    os.system('rm temp_polyco.dat')
+        polyfile = np.loadtxt('temp_polyco.dat', dtype=str, delimiter='$$$')
 
-    return np.array(polycos).astype(float), tmid, rphase
+        self.start = MJD(start)
+        self.tmid = self.start + np.floor(tobs/60.)/2880.
+        self.rphase = float(polyfile[1][1:20])
+        self.polycos = []
+        for line in polyfile[2:]:
+            self.polycos += line.replace('D', 'E').split()
+        self.polycos = np.array(self.polycos).astype(float)
 
-def calc_phases(rphase, tmid, tres, nbins, f0, polycos):
-    dt = 1440.*(np.linspace(0.,tres*nbins,nbins,endpoint=False)/86400. - tmid)
-    return rphase + dt*60.*f0 + polyval(dt, polycos)
+        self.profile = profile
+        self.tobs = tobs
+        self.obs = obs
+        self.freq = freq
+        self.ncoeff = ncoeff
 
-def calc_freq(time, tmid, f0, polycos):
-    """
-    time and tmid both MJD objects
-    """
-    dt = ((time-tmid).as_float())*1440.
-    polyval = 0.
-    for ii in range(len(polycos)): polyval += ii*pow(dt,ii-1)*polycos[ii]
-    return f0 + (1./60.)*polyval
+        self.end = self.start + np.floor(tobs/60.)/1440.
 
-def fold(timeseries, tres_ts, polycos):
-    return 'not done yet'
+        os.system('rm temp_polyco.dat')
+
+    def calc_phases(self, tres, nbins):
+        """
+        tres in seconds
+        """
+        dt_A = np.linspace(0., tres*nbins, nbins, endpoint=False)/86400.
+        if self.start + dt_A[-1] > self.end:
+            print "WARNING: Phases are being generated outside the range"+\
+                " of validity of the set of polycos being used."
+        dt = 1440.*(dt_A - float(self.tmid - self.start))
+        return self.rphase + dt*60.*self.profile.f0 + polyval(dt, self.polycos)
+
+    def calc_freq(self, time):
+        """
+        time: MJD object
+        """
+        dt = float(MJD(time)-self.tmid)*1440.
+        multy = np.arange(1, self.ncoeff, 1)
+        return self.profile.f0 + (1./60.)*polyval(dt, multy*self.polycos[1:])
 
 def simple_fold(ts, tres_ts, p0, p1, phasebins, timebins=1):
     """
@@ -626,14 +696,24 @@ def create_parfile(name, p0, p1, posepoch, pepoch, T0, Pb,\
                    om=None, ecc=None, incl=None, m_p=1.4, m_c=1.4,\
                    comments=None):
     """
-    Still a test...
+    name: pulsar name
+    p0: spin period (s)
+    p1: spin period derivative
+    posepoch, pepoch, T0: MJD objects for the various parameter epochs
     Pb: binary period in days
-    incl in degrees between 0 and 90
-    T0, posepoch and pepoch should be MJD objects
+    om: argument of periastron in degrees
+    ecc: orbital eccentricity
+    incl: inclination angle in degrees between 0 and 90
+    m_p, m_c: masses (solar units) of pulsar and companion
     comments: string to be appended to parfile as comment
     """
     pars = ['PSR', 'RAJ', 'DECJ', 'POSEPOCH', 'P0', 'P1', 'PEPOCH', 'DM',\
-            'BINARY', 'A1', 'E', 'T0', 'PB', 'OM', 'MTOT', 'M2']
+            'BINARY', 'A1', 'E', 'T0', 'PB', 'OM', 'MTOT', 'M2',\
+            'OMDOT', 'GAMMA', 'PBDOT', 'SINI']
+
+    posepoch = MJD(posepoch)
+    pepoch = MJD(pepoch)
+    T0 = MJD(T0)
 
     # Get a random inclination if none is given
     if incl is None:
@@ -657,12 +737,23 @@ def create_parfile(name, p0, p1, posepoch, pepoch, T0, Pb,\
     # Get a random longitude of periastron is none is given
     if om is None: om = np.random.uniform(high=360.)
 
-    par_vals = [name, '00:00:00.0', '00:00:00.0', posepoch.show(), repr(p0),\
-                repr(p1), pepoch.show(), '100.0', 'DDGR',\
-                repr(asini), repr(ecc), T0.show(), repr(Pb), repr(om),\
-                repr(m_p+m_c), repr(m_c)]
+    # PK parameters (except m_c which we already have as input)
+    n = 2.*np.pi/(Pb*86400.)
+    omdot = 3*pow(n,5./3.)*pow(((m_p+m_c)*TSUN),2./3.)/(1.-ecc*ecc)/OMFAC
+    gamma = pow(n,-1./3.)*ecc*m_c*(2.*m_c+m_p)*pow((m_p+m_c),-4./3.)*\
+        pow(TSUN,2./3.)
+    pbdot = -192.*np.pi/5.*pow(n,5./3.)*m_p*m_c*pow((m_p+m_c),-1./3.)*\
+        pow(TSUN,5./3.)*(1.+73./24.*ecc*ecc+37./96.*pow(ecc,4))*\
+        pow((1.-ecc*ecc),-3.5)
+    sini_out = asini*pow(n,2./3.)*pow((m_p+m_c),2./3.)*pow(TSUN,-1./3.)/m_c
 
-    parline = '%-7s %18s'
+    par_vals = [name, '00:00:00.0', '00:00:00.0', posepoch.show(), repr(p0),\
+                repr(p1), pepoch.show(), '100.0', 'DD',\
+                repr(asini), repr(ecc), T0.show(), repr(Pb), repr(om),\
+                repr(m_p+m_c), repr(m_c), repr(omdot), repr(gamma),\
+                repr(pbdot), repr(sini_out)]
+
+    parline = '%-9s %22s'
     out_lines = []
     for ii in range(len(pars)):
         out_lines.append(parline % (pars[ii], par_vals[ii]))
