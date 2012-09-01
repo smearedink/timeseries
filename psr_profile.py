@@ -694,7 +694,7 @@ def write_dat(ts, datfile):
 # have enough information to use DDGR...
 def create_parfile(name, p0, p1, posepoch, pepoch, T0, Pb,\
                    om=None, ecc=None, incl=None, m_p=1.4, m_c=1.4,\
-                   comments=None):
+                   comments=None, **kwargs):
     """
     name: pulsar name
     p0: spin period (s)
@@ -706,14 +706,24 @@ def create_parfile(name, p0, p1, posepoch, pepoch, T0, Pb,\
     incl: inclination angle in degrees between 0 and 90
     m_p, m_c: masses (solar units) of pulsar and companion
     comments: string to be appended to parfile as comment
+
+    kwargs
+    ------
+    tzrmjd: default same as pepoch, MJD object used as TOA for reference phase
+    tzrfrq: default 1420.0, reference observing frequency
+    tzrsite: default -1 (barycentre), reference site
     """
     pars = ['PSR', 'RAJ', 'DECJ', 'POSEPOCH', 'P0', 'P1', 'PEPOCH', 'DM',\
             'BINARY', 'A1', 'E', 'T0', 'PB', 'OM', 'MTOT', 'M2',\
-            'OMDOT', 'GAMMA', 'PBDOT', 'SINI']
+            'OMDOT', 'GAMMA', 'PBDOT', 'SINI', 'TZRMJD', 'TZRFRQ', 'TZRSITE']
 
     posepoch = MJD(posepoch)
     pepoch = MJD(pepoch)
     T0 = MJD(T0)
+
+    tzrmjd = kwargs.get('tzrmjd', pepoch)
+    tzrfrq = kwargs.get('tzrfrq', 1420.0)
+    tzrsite = kwargs.get('tzrsite', -1)
 
     # Get a random inclination if none is given
     if incl is None:
@@ -751,7 +761,8 @@ def create_parfile(name, p0, p1, posepoch, pepoch, T0, Pb,\
                 repr(p1), pepoch.show(), '100.0', 'DD',\
                 repr(asini), repr(ecc), T0.show(), repr(Pb), repr(om),\
                 repr(m_p+m_c), repr(m_c), repr(omdot), repr(gamma),\
-                repr(pbdot), repr(sini_out)]
+                repr(pbdot), repr(sini_out), repr(tzrmjd), repr(tzrfrq),\
+                str(tzrsite)]
 
     parline = '%-9s %22s'
     out_lines = []
