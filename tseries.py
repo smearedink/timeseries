@@ -122,7 +122,7 @@ class TimeSeriesEditor(QtGui.QMainWindow):
                 for psr in self.psr_pars_dict.values():
                     psr.posepoch = repr(load_mjd)
                     psr.pepoch = repr(load_mjd)
-                    psr.t0 = repr(load_mjd)
+                    psr.t0 = repr(load_mjd - psr.t0_subtract)
                 self.show_pars()
             elif mjd_reply == QtGui.QMessageBox.Cancel:
                 return
@@ -167,6 +167,10 @@ class TimeSeriesEditor(QtGui.QMainWindow):
         multi_psr_ts_add(profiles, profile_amps, load_basename, save_basename, load_basedir, save_basedir)
         os.rename('%s.inf'%save_basename, '%s.inf'%(save_basedir+save_basename))
 
+        for prof in profiles:
+            prof.plot(tres=8.192e-7,\
+                outfile=pardir+'/'+save_basename+'_'+prof.pars['PSR']+'.eps')
+
         # Update status box to show we're done saving
         self.ui.statusreport.setText('Files written to %s' % save_basedir)
         self.ui.statusreport.setStyleSheet("QFrame { background-color: %s }" % self.status_norm_clr.name())
@@ -188,6 +192,7 @@ class TimeSeriesEditor(QtGui.QMainWindow):
         tres = float(self.ui.inputTres.text())
         length = float(self.ui.inputLength.text())
         nbins = int(np.ceil(length/tres))
+        if nbins % 2: nbins -= 1
         try: totalbins_str = locale.format("%d", nbins*npsrs, grouping=True)
         except: totalbins_str = repr(nbins*npsrs)
         self.ui.statusreport.setText('Generating a total of %s time series bins. Please wait...' % totalbins_str)
@@ -212,6 +217,10 @@ class TimeSeriesEditor(QtGui.QMainWindow):
 
         multi_psr_ts(profiles, profile_amps, start_time, tres, noise, length, basename, basedir)
         os.rename('%s.inf'%basename, '%s.inf'%(basedir+basename))
+
+        for prof in profiles:
+            prof.plot(tres=8.192e-7,\
+                outfile=pardir+'/'+basename+'_'+prof.pars['PSR']+'.eps')
 
         # Update status box to show we're done saving
         self.ui.statusreport.setText('Files written to %s' % basedir)
@@ -318,12 +327,14 @@ class ParInputs():
         self.inc = repr(inc)
 
         # Pb from 10 minutes to 3 days
-        self.pb = repr(np.random.uniform(low=6./864., high=3.))
+        pb = np.random.uniform(low=6./864., high=3.)
+        self.pb = repr(pb)
 
         mjdstring = str(current_mjd().day_int)
         self.posepoch = mjdstring
         self.pepoch = mjdstring
-        self.t0 = mjdstring
+        self.t0_subtract = np.random.uniform()*pb
+        self.t0 = (MJD(mjdstring) - self.t0_subtract).show()
 
         self.m1 = '1.4'
 

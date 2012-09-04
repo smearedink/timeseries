@@ -1,4 +1,6 @@
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import pylab as plt
 import matplotlib.cm as cm
 import sys
@@ -121,19 +123,22 @@ class psrProfile:
                              peak[0], 0.0, nbins)
         return prof
 
-    def plot(self, tres=8.192e-5):
+    def plot(self, tres=8.192e-5, outfile='profile.eps'):
         """
-        Show a quick plot of the profile.
+        Output a plot of the profile.
 
         tres: time resolution in seconds
+        outfile: output file for plot if desired--format deduced from extension
         """
         nbins = np.ceil(self.p0/tres)
         hiphase = nbins/(self.p0/tres)
         axis = np.linspace(0, hiphase, nbins, endpoint=False)
-        plt.plot(axis, self.bin_prof(tres=tres))
+        plt.figure()
         plt.xlabel('Phase') 
         plt.ylim(-0.1, 1.1)
         plt.xlim(0., 1.)
+        plt.plot(axis, self.bin_prof(tres=tres))
+        plt.savefig(outfile, bbox_inches='tight')
 
     def scale_height(self, factor):
         """
@@ -320,6 +325,7 @@ class TimeSeries():
         self.zero = zero
         self.pulseheight = pulseheight
         self.nbins = int(np.ceil(length/tres))
+        if self.nbins % 2: self.nbins -= 1
         self.length = self.nbins*tres
         self.nchunks = nchunks
 
@@ -340,8 +346,14 @@ class TimeSeries():
 
         split_ts_pulses = np.array_split(self.ts_pulses, self.nchunks)
 
+        print "Generating time series for pulsar %s..." %\
+            self.profile.pars['PSR']
+
         time = start
+        chunkcount = 0
         for chunk in split_ts_pulses:
+            chunkcount += 1
+            print "Making chunk %d of %d..." % (chunkcount, self.nchunks)
             chunklen = len(chunk)
             tobs = chunklen*tres
             if tobs % 60: tobs += 60. - (tobs % 60)
@@ -350,6 +362,8 @@ class TimeSeries():
             chunk += pulseheight*profile.phase(phase_arr)
             time = time + chunklen*tres/86400.
         self.ts_pulses = np.concatenate(split_ts_pulses)
+
+        print "Time series complete."
 
     def plot(self, withnoise=True, rounded=False):
         """
@@ -370,6 +384,7 @@ class TimeSeries():
         else: sys.exit('What did you just do?')
         plt.xlabel('Time (seconds)')
         plt.xlim(0, len(self.ts_pulses)*self.tres)
+        plt.savefig('ts_plot.eps')
 
     def savedat(self, fname, withnoise=True):
         """
@@ -393,12 +408,17 @@ class TimeSeries():
         inf.filt = 'NA'
         inf.analyzer = 'NA'
         inf.notes = 'Completely fake data set.'
+
+        print "Writing %s.dat and %s.inf..." % (fname, fname)
+
         # round since .dat files use integers
         if withnoise:
             write_dat(np.round(self.ts_pulses+self.ts_noise), fname)
         else:
             write_dat(np.round(self.ts_pulses), fname)
         writeinf(inf)
+
+        print "Done."
 
     def set_noise(self, noise):
         self.ts_noise = np.random.normal(loc=self.zero, scale=noise,\
@@ -457,8 +477,10 @@ class polyCo:
     obs: observatory code (-1 is barycentred)
     freq: radio frequency for which to generate polycos
     ncoeff: number of coefficients to generate
+    delete_outfile: if False, 'temp_polyco.dat' will remain in directory
     """
-    def __init__(self, profile, start, tobs, obs=-1, freq=1420.0, ncoeff=12):
+    def __init__(self, profile, start, tobs, obs=-1, freq=1420.0, ncoeff=12,\
+        delete_outfile=True):
         os.system(('tempo -f %s -Z START=%s -Z SPAN=%f -Z TOBS=%fS -Z OBS=%s'+\
             ' -Z FREQ=%f -Z NCOEFF=%d -Z OUT=temp_polyco.dat') %\
             (profile.parfile, start.show(), tobs, tobs, obs, freq, ncoeff))
@@ -481,7 +503,7 @@ class polyCo:
 
         self.end = self.start + np.floor(tobs/60.)/1440.
 
-        os.system('rm temp_polyco.dat')
+        if delete_outfile: os.system('rm temp_polyco.dat')
 
     def calc_phases(self, tres, nbins):
         """
@@ -557,6 +579,7 @@ def multi_psr_ts(psr_list, amp_list, start, tres, noise, length, fname,\
     noise: sigma of white noise in time series
     """
     nbins = int(np.ceil(length/tres))
+    if nbins % 2: nbins -= 1
 
     full_ts = np.zeros(nbins)
 
@@ -565,10 +588,12 @@ def multi_psr_ts(psr_list, amp_list, start, tres, noise, length, fname,\
 
     for ii in range(len(psr_list)):
         ts = TimeSeries(psr_list[ii], amp_list[ii], start, tres, 0, length,\
-                        obs)
+            obs)
         full_ts += ts.ts_pulses
         
     if noise: full_ts += np.random.normal(loc=0, scale=noise, size=nbins)
+
+    print "Writing %s.dat and %s.inf..." % (fname, fname)
 
     write_dat(np.round(full_ts), '%s/%s' % (fpath, fname))
 
@@ -589,8 +614,10 @@ def multi_psr_ts(psr_list, amp_list, start, tres, noise, length, fname,\
     inf.notes = 'Completely fake data set.'
     writeinf(inf)
 
+    print "Done."
+
 def multi_psr_ts_add(psr_list, amp_list, in_fname, out_fname, in_fpath='.',\
-                     out_fpath='.'):
+    out_fpath='.'):
     """
     edit of multi_psr_ts to allow adding to existing datfile...
     in_fname and out_fname: no extension
@@ -612,7 +639,9 @@ def multi_psr_ts_add(psr_list, amp_list, in_fname, out_fname, in_fpath='.',\
     for ii in range(len(psr_list)):
         ts = TimeSeries(psr_list[ii], amp_list[ii], start, tres, 0, length)
         full_ts += ts.ts_pulses
-        
+    
+    print "Writing %s.dat and %s.inf..." % (out_fname, out_fname)
+
     write_dat(np.round(full_ts), '%s/%s' % (out_fpath, out_fname))
 
     inf = in_inffile
@@ -621,6 +650,8 @@ def multi_psr_ts_add(psr_list, amp_list, in_fname, out_fname, in_fpath='.',\
     inf.analyzer = 'Nobody (edited data)'
     inf.notes = 'Edited file %s.dat' % in_fname
     writeinf(inf)
+
+    print "Done."
 
 def prof_samples(w=3, h=3, maxpeaks=5):
     """
@@ -637,7 +668,7 @@ def prof_samples(w=3, h=3, maxpeaks=5):
     if fh > 9.0: fh = 9.0
     plt.figure(figsize=(fw, fh))
     plt.subplots_adjust(bottom=.01, left=.01, right=.99, top=.99,\
-                        wspace=.05, hspace=.05)
+        wspace=.05, hspace=.05)
     for ii in range(w*h):
         prof = psrProfile(maxpeaks=maxpeaks)
         profile = prof.bin_prof()
@@ -647,7 +678,7 @@ def prof_samples(w=3, h=3, maxpeaks=5):
         plt.ylim(-0.1, 1.1)
         plt.xticks(())
         plt.yticks(())
-    plt.show()
+    plt.savefig('prof_samples.eps', bbox_inches='tight')
 
 def fft_ts(ts, hifreq=100.0):
     """
