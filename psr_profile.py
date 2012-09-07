@@ -489,7 +489,7 @@ class polyCo:
 
         self.start = MJD(start)
         self.tmid = self.start + np.floor(tobs/60.)/2880.
-        self.rphase = float(polyfile[1][1:20])
+        self.rphase = float(polyfile[1].split()[0])
         self.polycos = []
         for line in polyfile[2:]:
             self.polycos += line.replace('D', 'E').split()
