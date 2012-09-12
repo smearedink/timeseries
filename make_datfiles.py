@@ -66,5 +66,5 @@ def random_TS(output_dat, minpsrs, maxpsrs, tres, length, noise=100, **kwargs):
             outfile=pardir+'/'+basename+'_'+prof.pars['PSR']+'.eps')
 
 for ii in range(nstart, nend+1):
-    fname = outpath + '/' + basename + '%02d'%(ii+1)
+    fname = outpath + '/' + basename + '%02d'%ii
     random_TS(fname, minpsrs, maxpsrs, tres, length)
