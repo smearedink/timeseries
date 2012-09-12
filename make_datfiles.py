@@ -7,20 +7,21 @@ import os, sys
 # lots of dat files without the gui.  It plays no part in the functioning of
 # the gui itself.
 
-usg_str = "usage: python make_datfiles.py <ndatfiles> <min npsrs per file> <max npsrs per file> <tres> <length in sec> <basename> <output directory>"
+usg_str = "usage: python make_datfiles.py <nstart> <nend> <min npsrs per file> <max npsrs per file> <tres> <length in sec> <basename> <output directory>"
 
-if len(sys.argv) != 8:
+if len(sys.argv) != 9:
     print usg_str
     sys.exit()
 
 try:
-    ndatfiles = int(sys.argv[1])
-    minpsrs = int(sys.argv[2])
-    maxpsrs = int(sys.argv[3])
-    tres = float(sys.argv[4])
-    length = float(sys.argv[5])
-    basename = sys.argv[6]
-    outpath = sys.argv[7]
+    nstart = int(sys.argv[1])
+    nend = int(sys.argv[2])
+    minpsrs = int(sys.argv[3])
+    maxpsrs = int(sys.argv[4])
+    tres = float(sys.argv[5])
+    length = float(sys.argv[6])
+    basename = sys.argv[7]
+    outpath = sys.argv[8]
 except:
     print usg_str
     sys.exit()
@@ -64,6 +65,6 @@ def random_TS(output_dat, minpsrs, maxpsrs, tres, length, noise=100, **kwargs):
         prof.plot(tres=8.192e-7,\
             outfile=pardir+'/'+basename+'_'+prof.pars['PSR']+'.eps')
 
-for ii in range(ndatfiles):
+for ii in range(nstart, nend+1):
     fname = outpath + '/' + basename + '%02d'%(ii+1)
     random_TS(fname, minpsrs, maxpsrs, tres, length)
