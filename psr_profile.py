@@ -6,7 +6,7 @@ import matplotlib.cm as cm
 import sys
 import os
 import struct
-from time import time as current_time
+from time import time as current_time, sleep
 from presto import read_inffile, writeinf, infodata
 from numpy.polynomial.polynomial import polyval
 
@@ -485,7 +485,12 @@ class polyCo:
             ' -Z FREQ=%f -Z NCOEFF=%d -Z OUT=temp_polyco.dat') %\
             (profile.parfile, start.show(), tobs, tobs, obs, freq, ncoeff))
 
-        polyfile = np.loadtxt('temp_polyco.dat', dtype=str, delimiter='$$$')
+        try:
+            polyfile = np.loadtxt('temp_polyco.dat', dtype=str, delimiter='$$$')
+        except:
+            print "temp_polyco.dat not ready yet, will try again in 2 seconds"
+            sleep(2)
+            polyfile = np.loadtxt('temp_polyco.dat', dtype=str, delimiter='$$$')
 
         self.start = MJD(start)
         self.tmid = self.start + np.floor(tobs/60.)/2880.
