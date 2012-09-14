@@ -1,8 +1,7 @@
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
-#import pylab as plt
-from pylab import figure, xlabel, ylabel, xlim, ylim, plot, savefig, imshow, subplot, subplots_adjust, xticks, yticks
+from matplotlib.pyplot import figure, xlabel, ylabel, xlim, ylim, plot, savefig, imshow, subplot, subplots_adjust, xticks, yticks
 import matplotlib.cm as cm
 import sys
 import os
