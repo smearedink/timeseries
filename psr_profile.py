@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
-import pylab as plt
+#import pylab as plt
+from pylab import figure, xlabel, ylabel, xlim, ylim, plot, savefig, imshow, subplot, subplots_adjust, xticks, yticks
 import matplotlib.cm as cm
 import sys
 import os
@@ -133,12 +134,12 @@ class psrProfile:
         nbins = np.ceil(self.p0/tres)
         hiphase = nbins/(self.p0/tres)
         axis = np.linspace(0, hiphase, nbins, endpoint=False)
-        plt.figure()
-        plt.xlabel('Phase') 
-        plt.ylim(-0.1, 1.1)
-        plt.xlim(0., 1.)
-        plt.plot(axis, self.bin_prof(tres=tres))
-        plt.savefig(outfile, bbox_inches='tight')
+        figure()
+        xlabel('Phase') 
+        ylim(-0.1, 1.1)
+        xlim(0., 1.)
+        plot(axis, self.bin_prof(tres=tres))
+        savefig(outfile, bbox_inches='tight')
 
     def scale_height(self, factor):
         """
@@ -374,17 +375,17 @@ class TimeSeries():
         """
         axis = np.linspace(0, self.nbins*self.tres, self.nbins, endpoint=False)
         if withnoise and rounded:
-            plt.plot(axis, np.round(self.ts_pulses+self.ts_noise))
+            plot(axis, np.round(self.ts_pulses+self.ts_noise))
         elif withnoise and not rounded:
-            plt.plot(axis, self.ts_pulses+self.ts_noise)
+            plot(axis, self.ts_pulses+self.ts_noise)
         elif not withnoise and rounded:
-            plt.plot(axis, np.round(self.ts_pulses))
+            plot(axis, np.round(self.ts_pulses))
         elif not withnoise and not rounded:
-            plt.plot(axis, self.ts_pulses)
+            plot(axis, self.ts_pulses)
         else: sys.exit('What did you just do?')
-        plt.xlabel('Time (seconds)')
-        plt.xlim(0, len(self.ts_pulses)*self.tres)
-        plt.savefig('ts_plot.eps')
+        xlabel('Time (seconds)')
+        xlim(0, len(self.ts_pulses)*self.tres)
+        savefig('ts_plot.eps')
 
     def savedat(self, fname, withnoise=True):
         """
@@ -554,17 +555,17 @@ def simple_fold(ts, tres_ts, p0, p1, phasebins, timebins=1):
         summed.append(np.sum(wrapped[ii*n_to_sum:(ii+1)*n_to_sum], axis=0))
     summed = np.array(summed)
     if timebins > 1:
-        plt.figure(figsize=(5, 6))
-        plt.imshow(np.concatenate((summed, summed), axis=1),\
+        figure(figsize=(5, 6))
+        imshow(np.concatenate((summed, summed), axis=1),\
                    aspect=2.8*phasebins/timebins, cmap=cm.Greys,\
                    interpolation='nearest', origin='lower')
-        plt.xlabel('Phase bins')
-        plt.ylabel('Time bins')
+        xlabel('Phase bins')
+        ylabel('Time bins')
         return summed
     else:
-        plt.plot(summed[0])
-        plt.xlabel('Phase bins')
-        plt.ylabel('Power (arbitrary units)')
+        plot(summed[0])
+        xlabel('Phase bins')
+        ylabel('Power (arbitrary units)')
         return summed[0]
 
 def multi_psr_ts(psr_list, amp_list, start, tres, noise, length, fname,\
@@ -666,19 +667,19 @@ def prof_samples(w=3, h=3, maxpeaks=5):
     fh = h*1.8
     if fw > 12.0: fw = 12.0
     if fh > 9.0: fh = 9.0
-    plt.figure(figsize=(fw, fh))
-    plt.subplots_adjust(bottom=.01, left=.01, right=.99, top=.99,\
+    figure(figsize=(fw, fh))
+    subplots_adjust(bottom=.01, left=.01, right=.99, top=.99,\
         wspace=.05, hspace=.05)
     for ii in range(w*h):
         prof = psrProfile(maxpeaks=maxpeaks)
         profile = prof.bin_prof()
-        plt.subplot(h,w,ii+1)
-        plt.plot(profile)
-        plt.xlim(0, len(profile))
-        plt.ylim(-0.1, 1.1)
-        plt.xticks(())
-        plt.yticks(())
-    plt.savefig('prof_samples.eps', bbox_inches='tight')
+        subplot(h,w,ii+1)
+        plot(profile)
+        xlim(0, len(profile))
+        ylim(-0.1, 1.1)
+        xticks(())
+        yticks(())
+    savefig('prof_samples.eps', bbox_inches='tight')
 
 def fft_ts(ts, hifreq=100.0):
     """
@@ -690,9 +691,9 @@ def fft_ts(ts, hifreq=100.0):
     spectrum = np.abs(np.fft.rfft(ts.ts_pulses + ts.ts_noise))
     freqaxis = np.linspace(0, 0.5/ts.tres, len(spectrum))
     cutoff = np.ceil(len(freqaxis)*(2.*ts.tres*hifreq))
-    plt.plot(freqaxis[:cutoff], spectrum[:cutoff])
-    plt.xlim(0, hifreq)
-    plt.xlabel('Frequency (Hz)')
+    plot(freqaxis[:cutoff], spectrum[:cutoff])
+    xlim(0, hifreq)
+    xlabel('Frequency (Hz)')
 
 def load_dat(datfile):
     """
