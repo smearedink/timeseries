@@ -481,16 +481,19 @@ class polyCo:
     """
     def __init__(self, profile, start, tobs, obs=-1, freq=1420.0, ncoeff=12,\
         delete_outfile=True):
+        pco_fname = profile.parfile.split('/')[-1].replace('.par','_polyco.dat')
+
         os.system(('tempo -f %s -Z START=%s -Z SPAN=%f -Z TOBS=%fS -Z OBS=%s'+\
-            ' -Z FREQ=%f -Z NCOEFF=%d -Z OUT=temp_polyco.dat') %\
-            (profile.parfile, start.show(), tobs, tobs, obs, freq, ncoeff))
+            ' -Z FREQ=%f -Z NCOEFF=%d -Z OUT=%s') %\
+            (profile.parfile, start.show(), tobs, tobs, obs, freq, ncoeff,\
+            pco_fname))
 
         try:
-            polyfile = np.loadtxt('temp_polyco.dat', dtype=str, delimiter='$$$')
+            polyfile = np.loadtxt(pco_fname, dtype=str, delimiter='$$$')
         except:
             print "temp_polyco.dat not ready yet, will try again in 2 seconds"
             sleep(2)
-            polyfile = np.loadtxt('temp_polyco.dat', dtype=str, delimiter='$$$')
+            polyfile = np.loadtxt(pco_fname, dtype=str, delimiter='$$$')
 
         self.start = MJD(start)
         self.tmid = self.start + np.floor(tobs/60.)/2880.
@@ -508,7 +511,7 @@ class polyCo:
 
         self.end = self.start + np.floor(tobs/60.)/1440.
 
-        if delete_outfile: os.system('rm temp_polyco.dat')
+        if delete_outfile: os.system('rm %s' % pco_fname)
 
     def calc_phases(self, tres, nbins):
         """
