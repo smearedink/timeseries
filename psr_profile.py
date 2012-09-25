@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
-from matplotlib.pyplot import figure, xlabel, ylabel, xlim, ylim, plot, savefig, imshow, subplot, subplots_adjust, xticks, yticks
+from matplotlib.pyplot import figure, xlabel, ylabel, xlim, ylim, plot,\
+    savefig, imshow, subplot, subplots_adjust, xticks, yticks
 import matplotlib.cm as cm
 import sys
 import os
@@ -346,14 +347,15 @@ class TimeSeries():
 
         split_ts_pulses = np.array_split(self.ts_pulses, self.nchunks)
 
-        print "Generating time series for pulsar %s..." %\
+        print "  Generating time series for pulsar %s..." %\
             self.profile.pars['PSR']
 
         time = start
         chunkcount = 0
         for chunk in split_ts_pulses:
             chunkcount += 1
-            print "Making chunk %d of %d..." % (chunkcount, self.nchunks)
+            print "    Making polyco-chunk %d of %d..." %\
+                (chunkcount, self.nchunks)
             chunklen = len(chunk)
             tobs = chunklen*tres
             if tobs % 60: tobs += 60. - (tobs % 60)
@@ -363,7 +365,7 @@ class TimeSeries():
             time = time + chunklen*tres/86400.
         self.ts_pulses = np.concatenate(split_ts_pulses)
 
-        print "Time series complete."
+        print "  Time series complete."
 
     def plot(self, withnoise=True, rounded=False):
         """
@@ -576,7 +578,7 @@ def simple_fold(ts, tres_ts, p0, p1, phasebins, timebins=1):
         return summed[0]
 
 def multi_psr_ts(psr_list, amp_list, start, tres, noise, length, fname,\
-                 fpath='.', obs=-1):
+                 fpath='.', obs=-1, zero=0.):
     """
     fname: no extension
     fpath: directory to place dat and inf files into
@@ -586,25 +588,43 @@ def multi_psr_ts(psr_list, amp_list, start, tres, noise, length, fname,\
     start: start time as MJD object
     noise: sigma of white noise in time series
     """
-    nbins = int(np.ceil(length/tres))
-    if nbins % 2: nbins -= 1
-
-    full_ts = np.zeros(nbins)
-
     amp_list = np.array(amp_list)
     if noise: amp_list *= noise
 
-    for ii in range(len(psr_list)):
-        ts = TimeSeries(psr_list[ii], amp_list[ii], start, tres, 0, length,\
-            obs)
-        full_ts += ts.ts_pulses
-        
-    if noise: full_ts += np.random.normal(loc=0, scale=noise, size=nbins)
+    nbins = int(np.ceil(length/tres))
+    if nbins % 2: nbins -= 1
 
-    print "Writing %s.dat and %s.inf..." % (fname, fname)
+    chunk_nbins = 2**24
+    chunk_length = chunk_nbins * tres
+    
+    n_full_chunks = nbins / chunk_nbins
+    extra_nbins = nbins % chunk_nbins
 
-    write_dat(np.round(full_ts), '%s/%s' % (fpath, fname))
+    # So we can correctly print which chunk we're on:
+    if extra_nbins: n_chunks = n_full_chunks + 1
+    else: n_chunks = n_full_chunks
 
+    outfile = open("%s/%s.dat" % (fpath, fname), 'w')
+
+    for chunk_ii in range(n_full_chunks):
+        chunk_start = start + chunk_ii*(chunk_length/86400.)
+        print "Writing time series chunk %d of %d to %s.dat..." % (chunk_ii+1,\
+            n_chunks, fname)
+        write_to_dat(outfile, psr_list, amp_list, chunk_start, tres, noise,\
+            chunk_nbins, obs, zero)
+        print "Time series chunk complete."
+
+    if extra_nbins:
+        chunk_start = start + n_full_chunks*(chunk_length/86400.)
+        print "Writing time series chunk %d of %d to %s.dat..." % (n_chunks,\
+            n_chunks, fname)
+        write_to_dat(outfile, psr_list, amp_list, chunk_start, tres, noise,\
+            extra_nbins, obs, zero)
+        print "Time series chunk complete."
+
+    outfile.close()
+
+    print "Writing %s.inf..." % fname
     inf = infodata()
     inf.name = fname
     inf.telescope = 'NA'
@@ -630,6 +650,9 @@ def multi_psr_ts_add(psr_list, amp_list, in_fname, out_fname, in_fpath='.',\
     edit of multi_psr_ts to allow adding to existing datfile...
     in_fname and out_fname: no extension
     amp_list: amps as fraction of time series 1-sigma noise level
+
+    NOTE: Should be edited so that it doesn't read and also write the whole
+        time series in one big chunk, more like how multi_psr_ts now works.
     """
     in_inffile = read_inffile('%s/%s' % (in_fpath, in_fname))
 
@@ -660,6 +683,25 @@ def multi_psr_ts_add(psr_list, amp_list, in_fname, out_fname, in_fpath='.',\
     writeinf(inf)
 
     print "Done."
+
+def write_to_dat(open_file, psr_list, amp_list, start_mjd, tres, noise, nbins,\
+    obs=-1, zero=0.):
+    """
+    Given a list of pulsars and a corresponding list of their amplitudes,
+    append to time series in open_file, beginning at start_mjd.  Written to be
+    used with multi_psr_ts and multi_psr_ts_add.
+
+    open_file: a python file object that has been opened for writing
+    """
+    chunk_ts = np.zeros(nbins)
+    chunk_length = nbins * tres
+    for ii in range(len(psr_list)):
+        ts = TimeSeries(psr_list[ii], amp_list[ii], start_mjd, tres, 0,\
+            chunk_length, obs, zero=zero)
+        chunk_ts += ts.ts_pulses
+    if noise: chunk_ts += np.random.normal(0, noise, nbins)
+    outstr = struct.pack('f'*nbins, *np.round(chunk_ts))
+    open_file.write(outstr)
 
 def prof_samples(w=3, h=3, maxpeaks=5):
     """
