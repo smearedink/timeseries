@@ -841,7 +841,7 @@ def create_parfile(name, p0, p1, posepoch, pepoch, T0, Pb,\
     # p1 gets multiplied by 1.e15 because Tempo defines P1 in units of
     # 10^-15 s/s, but I prefer to keep it in s/s (dimensionless) in my code
     par_vals = [name, '00:00:00.0', '00:00:00.0', posepoch.show(), repr(p0),\
-                repr(p1*1.e15)), pepoch.show(), '100.0', 'DD',\
+                repr(p1*1.e15), pepoch.show(), '100.0', 'DD',\
                 repr(asini), repr(ecc), T0.show(), repr(Pb), repr(om),\
                 repr(m_p+m_c), repr(m_c), repr(omdot), repr(gamma),\
                 repr(pbdot), repr(sini_out), repr(tzrmjd), repr(tzrfrq),\
