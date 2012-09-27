@@ -326,8 +326,8 @@ class ParInputs():
         inc = np.arccos(np.random.uniform())*180./np.pi
         self.inc = repr(inc)
 
-        # Pb from 10 minutes to 3 days
-        pb = np.random.uniform(low=6./864., high=3.)
+        # Pb from 10 minutes to 1 day
+        pb = np.random.uniform(low=6./864., high=1.0)
         self.pb = repr(pb)
 
         mjdstring = str(current_mjd().day_int)
