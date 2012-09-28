@@ -594,7 +594,7 @@ def multi_psr_ts(psr_list, amp_list, start, tres, noise, length, fname,\
     nbins = int(np.ceil(length/tres))
     if nbins % 2: nbins -= 1
 
-    chunk_nbins = 2**24
+    chunk_nbins = 2**22
     chunk_length = chunk_nbins * tres
     
     n_full_chunks = nbins / chunk_nbins
@@ -794,7 +794,7 @@ def create_parfile(name, p0, p1, posepoch, pepoch, T0, Pb,\
     tzrfrq: default 1420.0, reference observing frequency
     tzrsite: default -1 (barycentre), reference site
     """
-    pars = ['PSR', 'RAJ', 'DECJ', 'POSEPOCH', 'P0', 'P1', 'PEPOCH', 'DM',\
+    pars = ['PSR', 'RAJ', 'DECJ', 'POSEPOCH', 'F0', 'F1', 'PEPOCH', 'DM',\
             'BINARY', 'A1', 'E', 'T0', 'PB', 'OM', 'MTOT', 'M2',\
             'OMDOT', 'GAMMA', 'PBDOT', 'SINI', 'TZRMJD', 'TZRFRQ', 'TZRSITE']
 
@@ -805,6 +805,10 @@ def create_parfile(name, p0, p1, posepoch, pepoch, T0, Pb,\
     tzrmjd = kwargs.get('tzrmjd', pepoch)
     tzrfrq = kwargs.get('tzrfrq', 1420.0)
     tzrsite = kwargs.get('tzrsite', -1)
+
+    # Convert p0 and p1 to f0 and f1
+    f0 = 1./p0
+    f1 = -p1/(p0*p0)
 
     # Get a random inclination if none is given
     if incl is None:
@@ -838,10 +842,8 @@ def create_parfile(name, p0, p1, posepoch, pepoch, T0, Pb,\
         pow((1.-ecc*ecc),-3.5)
     sini_out = asini*pow(n,2./3.)*pow((m_p+m_c),2./3.)*pow(TSUN,-1./3.)/m_c
 
-    # p1 gets multiplied by 1.e15 because Tempo defines P1 in units of
-    # 10^-15 s/s, but I prefer to keep it in s/s (dimensionless) in my code
-    par_vals = [name, '00:00:00.0', '00:00:00.0', posepoch.show(), repr(p0),\
-                repr(p1*1.e15), pepoch.show(), '100.0', 'DD',\
+    par_vals = [name, '00:00:00.0', '00:00:00.0', posepoch.show(), repr(f0),\
+                repr(f1), pepoch.show(), '100.0', 'DD',\
                 repr(asini), repr(ecc), T0.show(), repr(Pb), repr(om),\
                 repr(m_p+m_c), repr(m_c), repr(omdot), repr(gamma),\
                 repr(pbdot), repr(sini_out), repr(tzrmjd), repr(tzrfrq),\

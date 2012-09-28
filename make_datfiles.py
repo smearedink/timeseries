@@ -34,6 +34,8 @@ def random_TS(output_dat, minpsrs, maxpsrs, tres, length, noise=100, **kwargs):
     start_time: an MJD object, the time at which the time series begins.
         By default it's today's (integer) MJD.
     """
+    current_dir = os.getcwd()
+
     start_time = kwargs.get('start_time', MJD(current_mjd().day_int))
     if output_dat[-4:] != '.dat': output_dat += '.dat'
     basename = output_dat.split('/')[-1][:-4]
@@ -42,6 +44,8 @@ def random_TS(output_dat, minpsrs, maxpsrs, tres, length, noise=100, **kwargs):
     for word in pathsplit: basedir += (word + '/')
     pardir = '%s_parfiles' % (basedir + basename)
     if not os.path.exists(pardir): os.makedirs(pardir)
+
+    os.chdir(basedir)
 
     # Generate parfiles and dat/inf files
     numpsrs = np.random.random_integers(minpsrs, maxpsrs)
@@ -59,11 +63,13 @@ def random_TS(output_dat, minpsrs, maxpsrs, tres, length, noise=100, **kwargs):
         profile_amps.append(float(psr.amp))
 
     multi_psr_ts(profiles, profile_amps, start_time, tres, noise, length, basename, basedir)
-    os.rename('%s.inf'%basename, '%s.inf'%(basedir+basename))
+#    os.rename('%s.inf'%basename, '%s.inf'%(basedir+basename))
 
     for prof in profiles:
         prof.plot(tres=8.192e-7,\
             outfile=pardir+'/'+basename+'_'+prof.pars['PSR']+'.eps')
+
+    os.chdir(current_dir)
 
 for ii in range(nstart, nend+1):
     fname = outpath + '/' + basename + '%02d'%ii
