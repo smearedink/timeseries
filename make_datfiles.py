@@ -72,5 +72,5 @@ def random_TS(output_dat, minpsrs, maxpsrs, tres, length, noise=100, **kwargs):
     os.chdir(current_dir)
 
 for ii in range(nstart, nend+1):
-    fname = outpath + '/' + basename + '%02d'%ii + 'n'
+    fname = outpath + '/' + basename + 'n' + '%02d'%ii
     random_TS(fname, minpsrs, maxpsrs, tres, length)
