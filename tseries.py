@@ -345,7 +345,8 @@ class ParInputs():
             self.m2 = repr(np.random.uniform(3.0, 10.0))
 
         # pulse amplitude as a fraction of noise
-        self.amp = repr(round(np.random.triangular(0.001, 0.001, 0.01), 7))
+        # 130208: increased amps by factor of 10...
+        self.amp = repr(round(np.random.triangular(0.01, 0.01, 0.1), 7))
 
     def make_parfile(self):
         p0 = float(self.p0)
