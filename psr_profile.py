@@ -339,20 +339,22 @@ class TimeSeries():
         if obs is -1: self.bary = True
         else: self.bary = False
 
-        if noise: self.ts_noise = np.random.normal(loc=zero, scale=noise,\
-                                                   size=self.nbins)
-        else: self.ts_noise = np.zeros(self.nbins) + zero
+        # create real and imaginary parts of voltage noise
+        self.ts_noise_re = np.random.normal(loc=zero, scale=noise,\
+            size=self.nbins)
+        self.ts_noise_im = np.random.normal(loc=zero, scale=noise,\
+            size=self.nbins)
 
-        self.ts_pulses = np.zeros(self.nbins)
+        self.vltg_envelope = np.zeros(self.nbins)
 
-        split_ts_pulses = np.array_split(self.ts_pulses, self.nchunks)
+        split_vltg_envelope = np.array_split(self.vltg_envelope, self.nchunks)
 
         print "  Generating time series for pulsar %s..." %\
             self.profile.pars['PSR']
 
         time = start
         chunkcount = 0
-        for chunk in split_ts_pulses:
+        for chunk in split_vltg_envelope:
             chunkcount += 1
             print "    Making polyco-chunk %d of %d..." %\
                 (chunkcount, self.nchunks)
@@ -361,34 +363,42 @@ class TimeSeries():
             if tobs % 60: tobs += 60. - (tobs % 60)
             pco = polyCo(profile, time, tobs, obs)
             phase_arr = pco.calc_phases(tres, chunklen)
-            chunk += pulseheight*profile.phase(phase_arr)
+            chunk += np.sqrt(pulseheight*profile.phase(phase_arr))
             time = time + chunklen*tres/86400.
-        self.ts_pulses = np.concatenate(split_ts_pulses)
+        self.vltg_envelope = np.concatenate(split_vltg_envelope)
 
         print "  Time series complete."
 
-    def plot(self, withnoise=True, rounded=False):
+    def plot(self, rounded=False):
         """
         Show a plot of the time series.
 
-        withnoise: include the noise in the plot
         rounded: round values to nearest integers as in a presto .dat file
         """
         axis = np.linspace(0, self.nbins*self.tres, self.nbins, endpoint=False)
-        if withnoise and rounded:
-            plot(axis, np.round(self.ts_pulses+self.ts_noise))
-        elif withnoise and not rounded:
-            plot(axis, self.ts_pulses+self.ts_noise)
-        elif not withnoise and rounded:
-            plot(axis, np.round(self.ts_pulses))
-        elif not withnoise and not rounded:
-            plot(axis, self.ts_pulses)
-        else: sys.exit('What did you just do?')
+
+        #volt_re = (1.+self.vltg_envelope)*self.ts_noise_re
+        #volt_im = (1.+self.vltg_envelope)*self.ts_noise_im
+        #volt = volt_re + volt_im*1j
+        #ts = np.real(volt * volt.conjugate())
+        ts = self.ts()
+        if rounded: plot(axis, np.round(ts))
+        else: plot(axis, ts)
+
+        #if withnoise and rounded:
+        #    plot(axis, np.round(self.ts_pulses+self.ts_noise))
+        #elif withnoise and not rounded:
+        #    plot(axis, self.ts_pulses+self.ts_noise)
+        #elif not withnoise and rounded:
+        #    plot(axis, np.round(self.ts_pulses))
+        #elif not withnoise and not rounded:
+        #    plot(axis, self.ts_pulses)
+        #else: sys.exit('What did you just do?')
         xlabel('Time (seconds)')
-        xlim(0, len(self.ts_pulses)*self.tres)
+        xlim(0, len(self.vltg_envelope)*self.tres)
         savefig('ts_plot.eps')
 
-    def savedat(self, fname, withnoise=True):
+    def savedat(self, fname):
         """
         Save a presto-readable .dat file (with a corresponding .inf file)
         containing the time series.
@@ -413,34 +423,53 @@ class TimeSeries():
 
         print "Writing %s.dat and %s.inf..." % (fname, fname)
 
+        #volt_re = (1.+self.vltg_envelope)*self.ts_noise_re
+        #volt_im = (1.+self.vltg_envelope)*self.ts_noise_im
+        #volt = volt_re + volt_im*1j
+        #ts = np.real(volt * volt.conjugate())
+        ts = self.ts()
+        write_dat(np.round(ts), fname)
+
         # round since .dat files use integers
-        if withnoise:
-            write_dat(np.round(self.ts_pulses+self.ts_noise), fname)
-        else:
-            write_dat(np.round(self.ts_pulses), fname)
+        #if withnoise:
+        #    write_dat(np.round(self.ts_pulses+self.ts_noise), fname)
+        #else:
+        #    write_dat(np.round(self.ts_pulses), fname)
         writeinf(inf)
 
         print "Done."
 
     def set_noise(self, noise):
-        self.ts_noise = np.random.normal(loc=self.zero, scale=noise,\
-                                         size=self.nbins)
+        self.ts_noise_re = np.random.normal(loc=self.zero, scale=noise,\
+            size=self.nbins)
+        self.ts_noise_im = np.random.normal(loc=self.zero, scale=noise,\
+            size=self.nbins)
 
     def ts(self, rounded=False):
-        if rounded: return np.round(self.ts_pulses + self.ts_noise)
-        else: return self.ts_pulses + self.ts_noise
+        volt_re = (1.+self.vltg_envelope)*self.ts_noise_re
+        volt_im = (1.+self.vltg_envelope)*self.ts_noise_im
+        volt = volt_re + volt_im*1j
+        tser = np.real(volt * volt.conjugate())
+        if rounded: return np.round(tser)
+        else: return tser
 
-    def __add__(self, otherTS):
-        """
-        For now, this will just return an array without noise that contains
-        the pulses of both TimeSeries objects.  They must have the same length
-        and tres of course.
-        """
-        if (self.tres != otherTS.tres) or (self.length != otherTS.length):
-            sys.exit('When adding TimeSeries objects, they must have the same'+\
-                     ' length and time resolution.')
-        else:
-            return self.ts_pulses + otherTS.ts_pulses
+#    def __add__(self, otherTS):
+#        """
+#        For now, this will just return an array without noise that contains
+#        the pulses of both TimeSeries objects.  They must have the same length
+#        and tres of course.
+#
+#        ACTUALLY what this does now is return an array without noise that
+#        contains the voltage envelope (with baseline zero) for the two
+#        TimeSeries objects combined.
+#
+#        No wait, that doesn't work... how about I just comment this out.
+#        """
+#        if (self.tres != otherTS.tres) or (self.length != otherTS.length):
+#            sys.exit('When adding TimeSeries objects, they must have the same'+\
+#                     ' length and time resolution.')
+#        else:
+#            return self.vltg_envelope + otherTS.vltg_envelope
 
 def gaussian(phasebins=1024.0, sigma=0.01, mean=0.5, amp=1.0, loval=0.0,\
              hival=1.0):
@@ -654,6 +683,8 @@ def multi_psr_ts_add(psr_list, amp_list, in_fname, out_fname, in_fpath='.',\
     NOTE: Should be edited so that it doesn't read and also write the whole
         time series in one big chunk, more like how multi_psr_ts now works.
     """
+    print "WARNING: You are using multi_psr_ts_add, which does not add pulsars as voltages and is therefore inconsistent with the way the rest of this program currently works."
+
     in_inffile = read_inffile('%s/%s' % (in_fpath, in_fname))
 
     nbins = in_inffile.N
@@ -669,7 +700,7 @@ def multi_psr_ts_add(psr_list, amp_list, in_fname, out_fname, in_fpath='.',\
 
     for ii in range(len(psr_list)):
         ts = TimeSeries(psr_list[ii], amp_list[ii], start, tres, 0, length)
-        full_ts += ts.ts_pulses
+        full_ts += ts.vltg_envelope**2
     
     print "Writing %s.dat and %s.inf..." % (out_fname, out_fname)
 
@@ -693,13 +724,16 @@ def write_to_dat(open_file, psr_list, amp_list, start_mjd, tres, noise, nbins,\
 
     open_file: a python file object that has been opened for writing
     """
-    chunk_ts = np.zeros(nbins)
+    chunk_env = np.zeros(nbins)
     chunk_length = nbins * tres
     for ii in range(len(psr_list)):
         ts = TimeSeries(psr_list[ii], amp_list[ii], start_mjd, tres, 0,\
             chunk_length, obs, zero=zero)
-        chunk_ts += ts.ts_pulses
-    if noise: chunk_ts += np.random.normal(0, noise, nbins)
+        chunk_env += ts.vltg_envelope
+    volt_re = np.random.normal(0, noise, nbins)
+    volt_im = np.random.normal(0, noise, nbins)
+    volt = volt_re + volt_im*1j
+    chunk_ts = (1. + chunk_env) * np.real(volt*volt.conjugate())
     outstr = struct.pack('f'*nbins, *np.round(chunk_ts))
     open_file.write(outstr)
 
