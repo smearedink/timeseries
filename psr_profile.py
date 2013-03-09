@@ -727,7 +727,7 @@ def write_to_dat(open_file, psr_list, amp_list, start_mjd, tres, noise, nbins,\
     chunk_env = np.zeros(nbins)
     chunk_length = nbins * tres
     for ii in range(len(psr_list)):
-        ts = TimeSeries(psr_list[ii], amp_list[ii], start_mjd, tres, 0,\
+        ts = TimeSeries(psr_list[ii], amp_list[ii], start_mjd, tres, noise,\
             chunk_length, obs, zero=zero)
         chunk_env += ts.vltg_envelope
     volt_re = np.random.normal(0, noise, nbins)
